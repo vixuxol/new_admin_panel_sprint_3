@@ -1,0 +1,118 @@
+version: '3'
+name: 'movies-admin'
+
+services:
+  db:
+    image: postgres:${POSTGRES_TAG}
+    container_name: db
+    restart: always
+    volumes:
+      - db-data:/var/lib/postgresql/data/
+    expose:
+      - '5432'
+    networks:
+      - movies-network
+    environment:
+      - POSTGRES_DB
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+
+  movies_admin:
+    build: ./movies_admin
+    container_name: movies_admin
+    restart: always
+    volumes:
+      - static:/opt/app/static
+      - media:/opt/app/media
+    networks:
+      - movies-network
+    depends_on:
+      - db
+    expose:
+      - "8000"
+    environment:
+      - SECRET_KEY
+      - DEBUG
+      - ALLOWED_HOSTS
+      - POSTGRES_DB
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_HOST
+      - POSTGRES_PORT
+      - POSTGRES_SEARCH_PATHS
+      - DJANGO_SUPERUSER_USERNAME
+      - DJANGO_SUPERUSER_PASSWORD
+      - DJANGO_SUPERUSER_EMAIL
+
+  nginx:
+    image: nginx:${NGINX_TAG}
+    container_name: nginx
+    restart: always
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./configs:/etc/nginx/conf.d:ro
+      - static:/data/static:ro
+    depends_on:
+      - movies_admin
+    ports:
+      - '80:80'
+    networks:
+      - movies-network
+    environment:
+      - NGINX_HOST
+
+  redis:
+    image: redis:${REDIS_TAG}
+    container_name: redis
+    restart: always
+    expose:
+      - '6379'
+    networks:
+      - movies-network
+
+  elastic-search:
+    image: elasticsearch:${ELASTIC_SEARCH_TAG}
+    container_name: elastic
+    restart: always
+    networks:
+      - movies-network
+    ports:
+      - '9200:9200'
+    environment:
+      - 'discovery.type=single-node'
+      - 'xpack.security.enabled=false'
+
+  etl:
+    build: ./etl
+    container_name: etl
+    restart: always
+    networks:
+      - movies-network
+    depends_on:
+      - db
+      - elastic-search
+      - redis
+      - movies_admin
+    environment:
+      - DEBUG
+      - REDIS_HOST
+      - REDIS_PORT
+      - REDIS_DB
+      - POSTGRES_DB
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_HOST
+      - POSTGRES_PORT
+      - ELASTIC_PORT
+      - ELASTIC_HOST
+      - ELASTIC_INDEX
+      - ELASTIC_INDEX_MAPPING_FILE_PATH
+
+networks:
+  movies-network:
+    driver: bridge
+
+volumes:
+  media:
+  static:
+  db-data:
