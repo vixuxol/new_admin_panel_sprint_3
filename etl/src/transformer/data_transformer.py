@@ -42,8 +42,7 @@ class DataTransformer(BaseTransformer):
             id=record["film_work_id"],
             imdb_rating=record["film_work_rating"],
             title=record["film_work_title"] or "",
-            description=record["film_work_description"] or "",
-            genres=record["genre_name"] or "",
+            description=record["film_work_description"] or ""
         )
 
     def _enrich_by_persons_info(self, es_document: FilmWorkElasticDocument, record: AggregateFilmWorkRecord) -> FilmWorkElasticDocument:
@@ -59,13 +58,13 @@ class DataTransformer(BaseTransformer):
             if person not in persons_by_specified_role:
                 persons_by_specified_role.append(person)
                 setattr(es_document, f"{role}s", persons_by_specified_role)
-                setattr(es_document, f"{role}s_names", " ".join([person.name for person in persons_by_specified_role]))
+                setattr(es_document, f"{role}s_names", [person.name for person in persons_by_specified_role])
         return es_document
     
     def _enrich_by_genre_info(self, es_document: FilmWorkElasticDocument, record: AggregateFilmWorkRecord) -> FilmWorkElasticDocument:
-        current_genres = es_document.genres.split(" ")
+        current_genres = es_document.genres
         genre = record["genre_name"]
         if genre and genre not in current_genres:
             current_genres.append(genre)
-            es_document.genres = " ".join(current_genres)
+            es_document.genres = current_genres
         return es_document

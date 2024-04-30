@@ -11,12 +11,12 @@ class PersonElasticDocument(BaseModel):
 class FilmWorkElasticDocument(BaseModel):
     id: UUID
     imdb_rating: Optional[float] = None
-    genres: str = ""
+    genres: list[str] = Field(default_factory=list)
     title: str = ""
     description: str = ""
     directors: list[PersonElasticDocument] = Field(default_factory=list)
-    directors_names: str = ""
+    directors_names: list[str] = Field(default_factory=list)
     actors: list[PersonElasticDocument] = Field(default_factory=list)
-    actors_names: str = ""
+    actors_names: list[str] = Field(default_factory=list)
     writers: list[PersonElasticDocument] = Field(default_factory=list)
-    writers_names: str = ""
+    writers_names: list[str] = Field(default_factory=list)
