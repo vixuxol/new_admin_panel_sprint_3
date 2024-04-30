@@ -7,7 +7,7 @@ from loader.base_loader import BaseLoader
 from transformer.base_transformer import BaseTransformer
 
 
-@backoff()
+@backoff(1, 2, 60)
 async def etl_process(
         extractor: BaseExtractor,
         transformer: BaseTransformer,
@@ -15,11 +15,13 @@ async def etl_process(
         state_storage: BaseStorage
     ):
     state: dict = await state_storage.retrieve_state()
-    last_extraction_datetime = state.get("last_etl_processing", dt.datetime.min)
+    try:
+        last_extraction_datetime = dt.datetime.utcfromtimestamp(float(state.pop("last_etl_processing")))
+    except KeyError:
+        last_extraction_datetime = dt.datetime.min
 
-    documents = []
     async for records in extractor.extract_records_from_db(last_extraction_datetime):
-        documents.extend(transformer.process(records))
-
-    await loader.update_index(documents)
+        transformer.process(records)
+    
+    await loader.update_index(transformer.transformed_records.values())
     await state_storage.save_state({"last_etl_processing": dt.datetime.now().timestamp()})

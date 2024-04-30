@@ -14,7 +14,6 @@ async def main() -> None:
     logging.config.dictConfig(settings.logging_config)
     logger = logging.getLogger(__name__)
 
-    data_transformer = DataTransformer()
     async with (
         PostgresExtractor(settings.postgres_dsn) as extractor,
         Loader(settings.elastic_dsn, settings.elastic_index, settings.elastic_mapping) as loader,
@@ -22,7 +21,8 @@ async def main() -> None:
     ):
         while True:
             try:
-                await etl_process(extractor, data_transformer, loader, state_storage)
+                with DataTransformer() as data_transformer:
+                    await etl_process(extractor, data_transformer, loader, state_storage)
             except Exception as error:
                 logger.exception(error)
                 refresh_interval = settings.refresh_interval.total_seconds() * 10

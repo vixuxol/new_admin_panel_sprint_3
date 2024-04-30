@@ -1,5 +1,6 @@
 from uuid import UUID
 from pydantic import BaseModel, Field
+from typing import Optional
 
 
 class PersonElasticDocument(BaseModel):
@@ -9,10 +10,10 @@ class PersonElasticDocument(BaseModel):
 
 class FilmWorkElasticDocument(BaseModel):
     id: UUID
-    imdb_rating: float
-    genres: str
-    title: str
-    description: str
+    imdb_rating: Optional[float] = None
+    genres: str = ""
+    title: str = ""
+    description: str = ""
     directors: list[PersonElasticDocument] = Field(default_factory=list)
     directors_names: str = ""
     actors: list[PersonElasticDocument] = Field(default_factory=list)

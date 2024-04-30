@@ -36,7 +36,7 @@ class PostgresExtractor(BaseExtractor):
 
     async def extract_records_from_db(self, last_extraction_datetime: dt.datetime) -> AsyncGenerator[AggregateFilmWorkRecord, None]:
         modified_persons_ids = await self._extract_modified_persons_ids(last_extraction_datetime)
-        modified_film_works_ids = await self._extract_film_work_ids_by_related_person_ids(modified_persons_ids)
+        modified_film_works_ids = await self._extract_film_work_ids(modified_persons_ids, last_extraction_datetime)
         async for records in self._extract_records_by_related_film_works_ids(modified_film_works_ids):
             self._logger.debug("Fetched %s records.", len(records))
             yield records
@@ -48,22 +48,28 @@ class PostgresExtractor(BaseExtractor):
         self._logger.debug("Found %s modified persons since '%s'.", len(person_ids), last_extraction_datetime)
         return person_ids
 
-    async def _extract_film_work_ids_by_related_person_ids(self, persons_ids: list[PersonRecord]) -> list[FilmWorkRecord]:
-        self._logger.debug("Trying to extract film work's ids related with given person's_ids: %s", persons_ids)
-        persons = ", ".join([f"'{record['id']}'" for record in persons_ids])
+    async def _extract_film_work_ids(
+        self, 
+        persons_ids: list[PersonRecord], 
+        last_extraction_datetime: dt.datetime
+    ) -> list[FilmWorkRecord]:
+        where_conditions = [f"fw.updated_at > '{last_extraction_datetime}'"]
+        if persons_ids:
+            persons = ", ".join([f"'{record['id']}'" for record in persons_ids])
+            where_conditions.append(f"pfw.person_id IN ({persons})")
         sql_query = f"""
             SELECT fw.id
             FROM content.film_work AS fw
             LEFT JOIN content.person_film_work AS pfw ON pfw.film_work_id = fw.id
-            WHERE pfw.person_id IN ({persons});
+            WHERE {" OR ".join(where_conditions)};
         """
         film_work_ids = await self._connection.fetch(sql_query)
-        self._logger.debug("Found %s modified film works by related persons.", len(film_work_ids))
+        self._logger.debug("Found %s modified film works", len(film_work_ids))
         return film_work_ids
 
     async def _extract_records_by_related_film_works_ids(
         self,
-        film_works_ids: list[FilmWorkRecord],
+        film_works_ids: list[FilmWorkRecord]
     ) -> AsyncGenerator[AggregateFilmWorkRecord, None]:
         film_works = ", ".join([f"'{record['id']}'" for record in film_works_ids])
         sql_query = f"""

@@ -16,8 +16,8 @@ class RedisStorage(BaseStorage):
         self._redis = None
 
     async def __aenter__(self) -> Self:
-        self._logger.debug("Trying to connect to redis db...")
-        self._redis = await redis.from_url(self._redis_url)
+        self._logger.debug("Trying to connect to redis db... with %s", self._redis_url)
+        self._redis = await redis.from_url(self._redis_url, decode_responses=True)
         await self._redis.ping()
         self._logger.debug("Connected to redis db successfully.")
         return self
