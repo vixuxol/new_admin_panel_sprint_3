@@ -63,7 +63,7 @@ class DataTransformer(BaseTransformer):
         return es_document
     
     def _enrich_by_genre_info(self, es_document: FilmWorkElasticDocument, record: AggregateFilmWorkRecord) -> FilmWorkElasticDocument:
-        current_genres = es_document.genres.split(",")
+        current_genres = es_document.genres.split(" ")
         genre = record["genre_name"]
         if genre and genre not in current_genres:
             current_genres.append(genre)
